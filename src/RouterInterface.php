@@ -2,6 +2,8 @@
 
 namespace Http;
 
+use Http\Path\PathInterface;
+
 interface RouterInterface
 {
     /**
@@ -53,15 +55,15 @@ interface RouterInterface
     /**
      * The CLI used on command line prompt
      */
-    const CLI = 'CLI';
+    public const CLI = 'CLI';
 
     /**
      * Available to all methods
      */
-    const ANY = 'ANY';
+    public const ANY = 'ANY';
 
     /**
      * Add route path to router
      */
-    public function addPath(string $method, string $path, string $requestHandler): void;
+    public function addPath(string $method, string $path, string $requestHandler): PathInterface;
 }

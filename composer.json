@@ -1,5 +1,5 @@
 {
-  "name": "vulpes/router",
+  "name": "vulpes/http-router",
   "type": "library",
   "description": "Simple router & dispatcher implementation.",
   "keywords": [

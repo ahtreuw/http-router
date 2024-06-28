@@ -1,9 +1,14 @@
 <?php declare(strict_types=1);
 
-namespace Http;
+namespace Http\Dispatcher;
 
 use Http\Exception\MethodNotAllowedException;
 use Http\Exception\NotFoundException;
+use Http\Path\Path;
+use Http\Path\PathFinder;
+use Http\Path\PathFinderInterface;
+use Http\Path\PathInterface;
+use Http\RouterInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -29,9 +34,7 @@ class RouterMiddleware implements RouterInterface, MiddlewareInterface
         self::ANY => [self::SIMPLE_PATHS => [], self::COMPLEX_PATHS => []]
     ];
 
-    public function __construct(
-        private readonly PathFinderInterface $pathFinder = new PathFinder
-    )
+    public function __construct(        private readonly PathFinderInterface $pathFinder = new PathFinder    )
     {
     }
 
@@ -52,6 +55,7 @@ class RouterMiddleware implements RouterInterface, MiddlewareInterface
         $path = trim($request->getUri()->getPath(), "/ \n\r\t\v\0");
 
         if ($new = $this->find($request, $method, $path)) {
+            $this->reset($new);
             return $handler->handle($new);
         }
 
@@ -62,16 +66,21 @@ class RouterMiddleware implements RouterInterface, MiddlewareInterface
         throw new NotFoundException($request);
     }
 
-    public function addPath(string $method, string $path, string $requestHandler): void
+    public function addPath(string $method, string $path, string $requestHandler): PathInterface
     {
         if (array_key_exists($method, $this->map) === false) {
             throw new RuntimeException('Method Not Allowed: ' . $method);
         }
+
+        $pathInstance = new Path($this, $requestHandler);
+
         if (false === str_contains($path, '{')) {
-            $this->map[$method][self::SIMPLE_PATHS][trim($path, '/')] = $requestHandler;
-            return;
+            $this->map[$method][self::SIMPLE_PATHS][trim($path, '/')] = $pathInstance;
+            return $pathInstance;
         }
-        $this->map[$method][self::COMPLEX_PATHS][trim($path, '/')] = $requestHandler;
+
+        $this->map[$method][self::COMPLEX_PATHS][trim($path, '/')] = $pathInstance;
+        return $pathInstance;
     }
 
     private function find(
@@ -85,4 +94,19 @@ class RouterMiddleware implements RouterInterface, MiddlewareInterface
             $path
         );
     }
+
+
+    private function reset(ServerRequestInterface $serverRequest): void
+    {
+        $this->map = []; // reset map
+        if (method_exists($path = $this->getPath($serverRequest), 'reset')) {
+            $path->reset();
+        }
+    }
+
+    private function getPath(ServerRequestInterface $serverRequest): PathInterface
+    {
+        return $serverRequest->getAttribute(PathInterface::class);
+    }
+
 }

@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Http;
+namespace Http\Path;
 
 use Psr\Http\Message\ServerRequestInterface;
 

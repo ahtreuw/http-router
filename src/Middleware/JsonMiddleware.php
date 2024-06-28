@@ -23,7 +23,7 @@ readonly class JsonMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        if ($is = str_contains($request->getHeaderLine('Content-Type'), 'application/json')) {
+        if (str_contains($request->getHeaderLine('Content-Type'), 'application/json')) {
             if ($body = (string)$request->getBody()) {
                 try {
                     $contents = json_decode($body, $this->associative, $this->depth, $this->flags);
@@ -39,7 +39,7 @@ readonly class JsonMiddleware implements MiddlewareInterface
 
         $response = $handler->handle($request);
 
-        if ($is && $response->hasHeader('Content-Type') === false) {
+        if ($response->hasHeader('Content-Type') === false) {
             $response = $response->withHeader('Content-Type', 'application/json;charset=utf-8');
         }
 

@@ -1,9 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace Http;
+namespace Http\Path;
 
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use RuntimeException;
@@ -32,6 +31,13 @@ class PathFinder implements PathFinderInterface
     {
     }
 
+    /**
+     * @param ServerRequestInterface $request
+     * @param PathInterface[] $simplePaths
+     * @param PathInterface[] $complexPaths
+     * @param string $path
+     * @return ServerRequestInterface|null
+     */
     public function find(
         ServerRequestInterface $request,
         array                  $simplePaths,
@@ -40,9 +46,7 @@ class PathFinder implements PathFinderInterface
     ): ?ServerRequestInterface
     {
         if (array_key_exists($path, $simplePaths)) {
-            return $request
-                ->withAttribute(RequestHandlerInterface::class, $simplePaths[$path])
-                ->withAttribute('params', []);
+            return $request->withAttribute(PathInterface::class, $simplePaths[$path]);
         }
 
         try {
@@ -50,11 +54,11 @@ class PathFinder implements PathFinderInterface
         } catch (InvalidArgumentException) {
         }
 
-        foreach ($complexPaths as $complexPath => $controller) {
+        foreach ($complexPaths as $complexPath => $pathInstance) {
             if (is_null($params = $this->findRequestHandlerViaComplexPath($complexPath, $path))) {
                 continue;
             }
-            return $this->createComplexPathRequest($request, $controller, $params);
+            return $this->createComplexPathRequest($request, $pathInstance, $params);
         }
 
         return null;
@@ -103,10 +107,7 @@ class PathFinder implements PathFinderInterface
             throw new RuntimeException('InValid complex path pattern: "' . $complexPath . '"');
         }
 
-        $keys = [];
-        $types = [];
-        $replace = [];
-
+        $replace = $types = $keys = [];
         foreach ($matches[0] as $i => $match) {
             [$key, $type] = array_pad(explode(':', trim($match, '{}')), -2, null);
             $keys[$i] = $key ?: $i;
@@ -122,15 +123,14 @@ class PathFinder implements PathFinderInterface
 
     public function createComplexPathRequest(
         ServerRequestInterface $request,
-        string                 $controller,
+        PathInterface          $path,
         array                  $params
     ): ServerRequestInterface
     {
         $assoc = count(array_filter(array_keys($params), 'is_string')) === count($params);
 
-        $request = $request
-            ->withAttribute(RequestHandlerInterface::class, $controller)
-            ->withAttribute('params', $assoc ? $params : array_values($params));
+        $request = $request->withAttribute(PathInterface::class,
+            $path->withParams($assoc ? $params : array_values($params)));
 
         if ($assoc) {
             foreach ($params as $key => $param) {
@@ -143,7 +143,7 @@ class PathFinder implements PathFinderInterface
 
     public function prepareParamValue(null|string $type, string $value): string|int|float|bool|null
     {
-        if(!array_key_exists($type, self::COMPLEX_TYPES)){
+        if (!array_key_exists($type, self::COMPLEX_TYPES)) {
             return $value;
         }
         return match ($type) {

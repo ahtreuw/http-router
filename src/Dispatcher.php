@@ -2,7 +2,11 @@
 
 namespace Http;
 
-use Http\Exception\NotFoundException;
+use Http\Dispatcher\MiddlewareCollectorInterface;
+use Http\Dispatcher\MiddlewareCollectorTrait;
+use Http\Dispatcher\MiddlewareProviderInterface;
+use Http\Dispatcher\RouterMiddleware;
+use Http\Path\PathInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -10,52 +14,45 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use RuntimeException;
+use Throwable;
 
-class Dispatcher implements RouterInterface, RequestHandlerInterface
+class Dispatcher implements RouterInterface, RequestHandlerInterface, MiddlewareCollectorInterface
 {
-    private array $middlewares = [];
+    use MiddlewareCollectorTrait;
+
+    private null|(RouterInterface&MiddlewareInterface) $router;
 
     public function __construct(
-        private readonly ContainerInterface                  $container,
-        private readonly RouterInterface&MiddlewareInterface $router = new RouterMiddleware
+        private readonly ContainerInterface      $container,
+        RouterInterface&MiddlewareInterface      $router = new RouterMiddleware,
+        private readonly RequestHandlerInterface $handler = new RequestHandler
     )
     {
-        $this->middlewares[] = $this->router;
+        $this->addMiddleware($this->router = $router);
     }
 
-    public function addPath(string $method, string $path, string $requestHandler): void
+    public function addPath(string $method, string $path, string $requestHandler): PathInterface
     {
-        $this->router->addPath($method, $path, $requestHandler);
-    }
-
-    public function addMiddleware(MiddlewareInterface|string $middleware): self
-    {
-        $this->middlewares[] = $middleware;
-        return $this;
+        if (is_null($this->router)) {
+            throw new RuntimeException('After the request handler is running, the router is unavailable.');
+        }
+        return $this->router->addPath($method, $path, $requestHandler);
     }
 
     /**
-     * @throws NotFoundExceptionInterface
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundException
+     * @throws Throwable
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        if ($middleware = $this->fetchMiddleware()) {
-            return $middleware->process($request, $this);
+        $this->router = null;
+
+        if ($response = $this->processMiddlewares($request, $path = $this->getPath($request))) {
+            return $response;
         }
 
-        $requestHandler = $request->getAttribute(RequestHandlerInterface::class);
-
-        $method = null;
-
-        if (str_contains($requestHandler, '::')) {
-            [$requestHandler, $method] = explode('::', $requestHandler, 2);
-        }
-
-        $controller = $this->createController($requestHandler);
-
-        return $this->process($request, $controller, $method ?: null);
+        return $this->handler->handle($request
+            ->withAttribute(ControllerInterface::class, $this->createController($path)));
     }
 
     /**
@@ -64,7 +61,9 @@ class Dispatcher implements RouterInterface, RequestHandlerInterface
      */
     private function fetchMiddleware(): ?MiddlewareInterface
     {
-        $middleware = array_shift($this->middlewares);
+        if (is_null($middleware = array_shift($this->appendedMiddlewares))) {
+            $middleware = array_shift($this->middlewares);
+        }
 
         if ($middleware && false === is_object($middleware)) {
             return $this->container->get($middleware);
@@ -77,39 +76,35 @@ class Dispatcher implements RouterInterface, RequestHandlerInterface
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    private function createController(string $controllerName): object
+    private function createController(PathInterface $path): object
     {
-        return $this->container->get($controllerName);
+        return $this->container->get($path->getControllerName());
+    }
+
+    private function getPath(ServerRequestInterface $serverRequest): ?PathInterface
+    {
+        return $serverRequest->getAttribute(PathInterface::class);
     }
 
     /**
-     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
-    private function process(
-        ServerRequestInterface $request,
-        object                 $controller,
-        null|string            $method
-    ): ResponseInterface
+    private function processMiddlewares(ServerRequestInterface $request, null|PathInterface $path): ?ResponseInterface
     {
-        if ($controller instanceof RequestHandlerInterface) {
-            return $controller->handle($request);
-        }
-        if (method_exists($controller, 'setServerRequest')) {
-            $controller->setServerRequest($request);
+        if ($path instanceof MiddlewareProviderInterface && $middleware = $path->fetchMiddleware(true)) {
+            return $middleware->process($request, $this);
         }
 
-        $params = $request->getAttribute('params');
-        $paramsCount = count($params);
+        if ($middleware = $this->fetchMiddleware()) {
+            return $middleware->process($request, $this);
+        }
 
-        if (is_null($method) && 0 < $paramsCount && method_exists($controller, 'details')) {
-            return $controller->details(...$params);
+        if ($path instanceof MiddlewareProviderInterface && $middleware = $path->fetchMiddleware(false)) {
+            return $middleware->process($request, $this);
         }
-        if (is_null($method) && method_exists($controller, 'index')) {
-            return $controller->index(...$params);
-        }
-        if (method_exists($controller, $method) === false) {
-            throw new NotFoundException($request);
-        }
-        return $controller->$method(...$params);
+
+        return null;
     }
+
 }
