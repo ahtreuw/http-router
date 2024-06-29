@@ -55,20 +55,11 @@ class Dispatcher implements RouterInterface, RequestHandlerInterface, Middleware
             ->withAttribute(ControllerInterface::class, $this->createController($path)));
     }
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
-    private function fetchMiddleware(): ?MiddlewareInterface
+    private function fetchMiddleware(): null|string|MiddlewareInterface
     {
         if (is_null($middleware = array_shift($this->appendedMiddlewares))) {
             $middleware = array_shift($this->middlewares);
         }
-
-        if ($middleware && false === is_object($middleware)) {
-            return $this->container->get($middleware);
-        }
-
         return $middleware;
     }
 
@@ -93,18 +84,30 @@ class Dispatcher implements RouterInterface, RequestHandlerInterface, Middleware
     private function processMiddlewares(ServerRequestInterface $request, null|PathInterface $path): ?ResponseInterface
     {
         if ($path instanceof MiddlewareProviderInterface && $middleware = $path->fetchMiddleware(true)) {
-            return $middleware->process($request, $this);
+            return $this->prepareMiddleware($middleware)->process($request, $this);
         }
 
         if ($middleware = $this->fetchMiddleware()) {
-            return $middleware->process($request, $this);
+            return $this->prepareMiddleware($middleware)->process($request, $this);
         }
 
         if ($path instanceof MiddlewareProviderInterface && $middleware = $path->fetchMiddleware(false)) {
-            return $middleware->process($request, $this);
+            return $this->prepareMiddleware($middleware)->process($request, $this);
         }
 
         return null;
+    }
+
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
+    private function prepareMiddleware(null|string|MiddlewareInterface $middleware):?MiddlewareInterface
+    {
+        if ($middleware && false === is_object($middleware)) {
+            return $this->container->get($middleware);
+        }
+        return $middleware;
     }
 
 }
