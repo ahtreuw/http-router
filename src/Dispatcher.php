@@ -47,6 +47,10 @@ class Dispatcher implements RouterInterface, RequestHandlerInterface, Middleware
     {
         $this->router = null;
 
+        if (method_exists($this->container, 'set')) {
+            $this->container->set(ServerRequestInterface::class, $request);
+        }
+
         if ($response = $this->processMiddlewares($request, $path = $this->getPath($request))) {
             return $response;
         }
