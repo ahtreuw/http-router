@@ -2,22 +2,21 @@
 
 namespace Http\Path;
 
-use Http\Dispatcher\MiddlewareCollectorTrait;
 use Http\Dispatcher\MiddlewareProviderInterface;
-use Http\Dispatcher\MiddlewareProviderTrait;
-use Http\RouterInterface;
 
-class Path implements PathInterface, RouterInterface, MiddlewareProviderInterface
+class Path implements PathInterface
 {
-    use MiddlewareCollectorTrait, MiddlewareProviderTrait;
-
-    private array $params = [];
-
     public function __construct(
-        private null|RouterInterface $router,
-        private readonly string      $requestHandler
+        protected readonly string              $requestHandler,
+        protected readonly array               $params,
+        protected readonly null|GroupInterface $group
     )
     {
+    }
+
+    public function getRequestHandler(): string
+    {
+        return $this->requestHandler;
     }
 
     public function getControllerName(): string
@@ -36,29 +35,18 @@ class Path implements PathInterface, RouterInterface, MiddlewareProviderInterfac
         return null;
     }
 
-    public function __toString(): string
-    {
-        return $this->requestHandler;
-    }
-
-    public function addPath(string $method, string $path, string $requestHandler): PathInterface
-    {
-        return $this->router->addPath($method, $path, $requestHandler);
-    }
-
-    public function withParams(array $array): PathInterface
-    {
-        $this->params = $array;
-        return $this;
-    }
-
     public function getParams(): array
     {
         return $this->params;
     }
 
-    public function reset(): void
+    public function getGroup(): null|GroupInterface|MiddlewareProviderInterface
     {
-        $this->router = null;
+        return $this->group;
+    }
+
+    public function __toString(): string
+    {
+        return $this->requestHandler;
     }
 }

@@ -22,7 +22,8 @@
     "psr/log": "^3.0",
     "psr/http-client": "^1.0",
     "vulpes/http-exceptions": "^1.1",
-    "psr/simple-cache": "^3.0"
+    "psr/simple-cache": "^3.0",
+    "vulpes/http": "v1.4"
   },
   "autoload": {
     "psr-4": {

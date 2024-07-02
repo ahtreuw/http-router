@@ -46,7 +46,9 @@ class PathFinder implements PathFinderInterface
     ): ?ServerRequestInterface
     {
         if (array_key_exists($path, $simplePaths)) {
-            return $request->withAttribute(PathInterface::class, $simplePaths[$path]);
+            return $request
+                ->withAttribute(ParametersInterface::class, [])
+                ->withAttribute(PathInterface::class, $simplePaths[$path]);
         }
 
         try {
@@ -129,8 +131,9 @@ class PathFinder implements PathFinderInterface
     {
         $assoc = count(array_filter(array_keys($params), 'is_string')) === count($params);
 
-        $request = $request->withAttribute(PathInterface::class,
-            $path->withParams($assoc ? $params : array_values($params)));
+        $request = $request
+            ->withAttribute(ParametersInterface::class, $assoc ? $params : array_values($params))
+            ->withAttribute(PathInterface::class, $path);
 
         if ($assoc) {
             foreach ($params as $key => $param) {

@@ -50,32 +50,55 @@ $dispatcher->addMiddleware(Middleware\AnotherMiddleware::class);
 $dispatcher->appendMiddleware(Middleware\ErrorHandlerMiddleware::class);
 
 $dispatcher
+    // You can set prefix for paths via groups
+    ->addGroup(name: 'rest-v1', path: 'api/v1')
+        ->addMiddleware(Http\Middleware\JsonMiddleware::class)
+        ->appendMiddleware('id-for-a-middleware-1')
+        
+    // You can use more groups for one simple path
+    ->addGroup(name: 'rest-v2', path: 'api/v2')
+        ->addMiddleware(Http\Middleware\JsonMiddleware::class)
+        ->appendMiddleware('id-for-a-middleware-2')
+        
+    // You can use groups for simple authentication layers
+    ->addGroup(name: 'admin')
+        ->appendMiddleware('just-a-container-id-for-an-authentication-middleware')
+        
     // add command line endpoint MyController->index()
     ->addPath(method: 'GET', path: '/', requestHandler: MyController::class . '::index')
-    // add Middleware locally to current Path as string (classname), you can use object as well
-    ->addMiddleware(Http\Middleware\JsonMiddleware::class)
+        // add Middleware locally to current Path as string (classname), you can use object as well
+        ->addMiddleware(Http\Middleware\JsonMiddleware::class)
 
     // add command line endpoint, MyController->service(int $thread)
     ->addPath(method: 'CLI', path: '/service/{thread:int}', requestHandler: MyController::class . '::service')
 
     // add command line endpoint, MyController->create()
-    ->addPath(method: 'POST', path: '/entity/create', requestHandler: MyController::class . '::create')
+    ->addPath(
+            method: 'POST',
+            // because of groups the full path will be: "/api/v1/entity/create", and "/api/v2/entity/create"
+            path: '/entity/create',
+            requestHandler: MyController::class . '::create', 
+            groups: 'rest-v1', 'rest-v2'
+    )
     // add Middleware locally to current path as string (classname), you can use object as well
     ->addMiddleware(Middleware\MyMiddleware::class)
     ->appendMiddleware(Middleware\AnotherErrorMiddleware::class)
-    // The above middlewares will behave according to the pattern below (with global middlewares)
+    
+    // The above middlewares will behave according to the pattern below (with global middlewares), with rest-v1 group
     // AnotherErrorMiddleware  :before
+    // id-for-a-middleware-1   :before
     // ErrorHandlerMiddleware  :before
-    // RouterInterface         :before - added on construct Dispatcher, throws NotFoundException
     // anonymous               :before
     // AnotherMiddleware       :before
+    // JsonMiddleware          :before
     // MyMiddleware            :before
     // MyController->create()          - throws Throwable, everything from controller
     // MyMiddleware            :after
+    // JsonMiddleware          :after
     // AnotherMiddleware       :after
     // anonymous               :after
-    // RouterInterface         :after - Nothing happens here anymore
     // ErrorHandlerMiddleware  :after - You can catch RouterInterface's NotFoundException here
+    // id-for-a-middleware-1   :after
     // AnotherErrorMiddleware  :after - ... or here
 
     // You can use RequestHandler (RequestHandlerInterface) as Controller too

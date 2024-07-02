@@ -2,6 +2,7 @@
 
 namespace Http\Dispatcher;
 
+use Http\RouterInterface;
 use Psr\Http\Server\MiddlewareInterface;
 
 trait MiddlewareCollectorTrait
@@ -17,13 +18,13 @@ trait MiddlewareCollectorTrait
      */
     protected array $appendedMiddlewares = [];
 
-    public function addMiddleware(string|MiddlewareInterface $middleware): static
+    public function addMiddleware(string|MiddlewareInterface $middleware): RouterInterface&MiddlewareCollectorInterface
     {
         $this->middlewares[] = $middleware;
         return $this;
     }
 
-    public function appendMiddleware(string|MiddlewareInterface $middleware): static
+    public function appendMiddleware(string|MiddlewareInterface $middleware): RouterInterface&MiddlewareCollectorInterface
     {
         array_unshift($this->appendedMiddlewares, $middleware);
         return $this;

@@ -2,6 +2,7 @@
 
 namespace Http;
 
+use Http\Dispatcher\MiddlewareCollectorInterface;
 use Http\Path\PathInterface;
 
 interface RouterInterface
@@ -65,5 +66,15 @@ interface RouterInterface
     /**
      * Add route path to router
      */
-    public function addPath(string $method, string $path, string $requestHandler): PathInterface;
+    public function addPath(
+        string $method,
+        string $path,
+        string $requestHandler,
+        string ...$groups
+    ): RouterInterface&MiddlewareCollectorInterface;
+
+    public function addGroup(
+        string $name,
+        string $path = '/'
+    ): RouterInterface&MiddlewareCollectorInterface;
 }
