@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2b94feed4f26ff26a79abf86b94c6187",
+    "content-hash": "93670ae11a26de0097e691c160dfa525",
     "packages": [
         {
             "name": "psr/container",
@@ -498,16 +498,16 @@
         },
         {
             "name": "vulpes/http-exceptions",
-            "version": "v1.1",
+            "version": "v1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/ahtreuw/http-exception.git",
-                "reference": "a048ed81f084ab57d17625688798857acfadf82b"
+                "reference": "0df7bef9961e5e0379ecb1236bcc319ce30a4411"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/ahtreuw/http-exception/zipball/a048ed81f084ab57d17625688798857acfadf82b",
-                "reference": "a048ed81f084ab57d17625688798857acfadf82b",
+                "url": "https://api.github.com/repos/ahtreuw/http-exception/zipball/0df7bef9961e5e0379ecb1236bcc319ce30a4411",
+                "reference": "0df7bef9961e5e0379ecb1236bcc319ce30a4411",
                 "shasum": ""
             },
             "require": {
@@ -537,9 +537,9 @@
             ],
             "support": {
                 "issues": "https://github.com/ahtreuw/http-exception/issues",
-                "source": "https://github.com/ahtreuw/http-exception/tree/v1.1"
+                "source": "https://github.com/ahtreuw/http-exception/tree/v1.2"
             },
-            "time": "2024-06-21T19:25:21+00:00"
+            "time": "2024-07-02T18:41:36+00:00"
         }
     ],
     "packages-dev": [

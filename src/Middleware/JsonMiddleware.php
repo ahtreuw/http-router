@@ -2,6 +2,7 @@
 
 namespace Http\Middleware;
 
+use Exception;
 use Http\Exception\BadRequestException;
 use Http\Exception\RequestException;
 use Http\Factory\ResponseFactory;
@@ -43,12 +44,12 @@ readonly class JsonMiddleware implements MiddlewareInterface
             ]);
 
             $response = $this->responseFactory
-                ->createJson(self::UNPROCESSABLE_ENTITY, ['message' => $exception->getMessage()]);
+                ->createJson(self::UNPROCESSABLE_ENTITY, ['message' => $this->getMessage($exception)]);
 
         } catch (RequestException $exception) {
 
             $response = $this->responseFactory
-                ->createJson($exception::STATUS_CODE, ['message' => $exception->getMessage()]);
+                ->createJson($exception::STATUS_CODE, ['message' => $this->getMessage($exception)]);
 
         } catch (Throwable $exception) {
 
@@ -57,7 +58,7 @@ readonly class JsonMiddleware implements MiddlewareInterface
             ]);
 
             $response = $this->responseFactory
-                ->createJson(BadRequestException::STATUS_CODE, ['message' => $exception->getMessage()]);
+                ->createJson(BadRequestException::STATUS_CODE, ['message' => $this->getMessage($exception)]);
         }
 
         if ($response->hasHeader('Content-Type') === false) {
@@ -81,5 +82,17 @@ readonly class JsonMiddleware implements MiddlewareInterface
             );
         }
         return $request->withParsedBody([]);
+    }
+
+    private function getMessage(Exception|RequestException $exception): string|array
+    {
+        if (is_null($exception->getPrevious())) {
+            return $exception->getMessage();
+        }
+        $messages = [$exception->getMessage()];
+        while ($prev = $exception->getPrevious()) {
+            array_unshift($messages, ($exception = $prev)->getMessage());
+        }
+        return $messages;
     }
 }
