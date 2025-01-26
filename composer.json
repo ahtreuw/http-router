@@ -23,7 +23,7 @@
     "psr/http-client": "^1.0",
     "psr/simple-cache": "^3.0",
     "vulpes/http-exceptions": "v1.2",
-    "vulpes/http": "v1.4"
+    "vulpes/http": "v1.4.1"
   },
   "autoload": {
     "psr-4": {
