@@ -84,7 +84,7 @@ readonly class JsonMiddleware implements MiddlewareInterface
         return $request->withParsedBody([]);
     }
 
-    private function getMessage(Exception|RequestException $exception): string|array
+    private function getMessage(Throwable|Exception|RequestException $exception): string|array
     {
         if (is_null($exception->getPrevious())) {
             return $exception->getMessage();
